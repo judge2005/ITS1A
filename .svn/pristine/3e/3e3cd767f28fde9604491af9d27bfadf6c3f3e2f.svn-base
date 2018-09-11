@@ -1,0 +1,22 @@
+Exception (28):
+epc1=0x40203acb epc2=0x00000000 epc3=0x00000000 excvaddr=0x00000000 depc=0x00000000
+
+ctx: cont 
+sp: 3fff0ec0 end: 3fff10b0 offset: 01a0
+
+>>>stack>>>
+3fff1060:  00000000 00000000 3ffefbac 40203ac8  
+3fff1070:  3fffdad0 3ffeffc8 3ffefbac 40202342  
+3fff1080:  feefeffe feefeffe feefeffe feefeffe  
+3fff1090:  feefeffe 00000000 3fff007d 4020dc60  
+3fff10a0:  feefeffe feefeffe 3fff0090 40100718  
+<<<stack<<<
+
+ ets Jan  8 2013,rst cause:2, boot mode:(3,6)
+
+load 0x4010f000, len 1384, room 16 
+tail 8
+chksum 0x2d
+csum 0x2d
+v3ffe9890
+~ld

@@ -1,0 +1,29 @@
+{
+	bitwise: true,
+	camelCase: true,
+	curly: true,
+	eqeqeq: true,
+	es3: true,
+	forin: true,
+	indent: 4,
+	latedef: true,
+	newcap: true,
+	noempty: true,
+	nonew: false,
+	plusplus: false,
+	quotmark: 'single',
+	undef: true,
+	unused: true,
+	strict: true,
+	trailing: true,
+
+	asi: false,
+	boss: false,
+	lastsemic: true,
+	laxbreak: false,
+	laxcomma: false,
+	loopfunc: false,
+	shadow: true,
+
+	node: true
+}
