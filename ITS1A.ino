@@ -19,7 +19,7 @@
 #include <AsyncJson.h>
 //#include <ESP8266HTTPClient.h>
 #include <ESPAsyncHTTPClient.h>
-#include <ESPAsyncWiFiManager.h>
+#include <ESPAsyncWiFiManagerOTC.h>
 #include <DNSServer.h>
 #ifdef ALEXA
 #include <fauxmoESP.h>
@@ -33,6 +33,7 @@
 #include <SixNixieClock.h>
 #include <LEDs.h>
 #include <SoftMSTimer.h>
+#include <MovementSensor.h>
 
 #include <WSHandler.h>
 #include <WSMenuHandler.h>
@@ -42,12 +43,14 @@
 #include <WSPresetNamesHandler.h>
 #include <WSInfoHandler.h>
 
+const byte MovPin = 3;	// PIR/Radar etc.
+
 unsigned long nowMs = 0;
 
 String chipId = String(ESP.getChipId(), HEX);
 String ssid = "STC-";
 
-StringConfigItem hostName("hostname", 63, "ITS1A");
+StringConfigItem hostName("hostname", 63, "ITS1AClock");
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws"); // access at ws://[esp ip]/ws
@@ -188,6 +191,7 @@ namespace CurrentConfig {
 	IntConfigItem *reset_time = &ConfigSet1::reset_time;
 	IntConfigItem *set_time = &ConfigSet1::set_time;
 	BooleanConfigItem *hv = &ConfigSet1::hv;
+	ByteConfigItem *mov_delay = &ConfigSet1::mov_delay;
 
 	// Alexa config values
 	StringConfigItem *date_name = &::date_name;
@@ -245,6 +249,7 @@ namespace CurrentConfig {
 			reset_time = static_cast<IntConfigItem*>(config->get("reset_time"));
 			set_time = static_cast<IntConfigItem*>(config->get("set_time"));
 			hv = static_cast<BooleanConfigItem*>(config->get("hv"));
+			mov_delay = static_cast<ByteConfigItem*>(config->get("mov_delay"));
 
 			BaseConfigItem *currentSetName = rootConfig.get("current_set");
 			currentSetName->fromString(name);
@@ -252,6 +257,8 @@ namespace CurrentConfig {
 		}
 	}
 }
+
+MovementSensor mov(MovPin);
 
 class ITS1ANixieDriverConfigurator : Configurator {
 public:
@@ -284,6 +291,7 @@ public:
 		}
 
 		clock.setHV(*CurrentConfig::hv);
+		clock.setMov(mov.isOn());
 		clock.setFadeMode(*CurrentConfig::fading);
 		clock.setTimeMode(*CurrentConfig::time_or_date);
 		clock.setDateFormat(*CurrentConfig::date_format);
@@ -789,6 +797,9 @@ SoftMSTimer timedFunctions(infos);
 
 void setup()
 {
+	pinMode(MovPin, FUNCTION_3);
+	pinMode(MovPin, INPUT_PULLUP);
+
 	chipId.toUpperCase();
 //	Serial.begin(921600);
 //	Serial.begin(115200);
@@ -829,6 +840,9 @@ void setup()
 
 	nowMs = millis();
 
+	mov.setDelay(1);
+	mov.setOnTime(nowMs);
+
 	DEBUG("Exit setup")
 }
 
@@ -848,10 +862,12 @@ void loop()
 
 	nowMs = millis();
 
+	mov.setDelay(*CurrentConfig::mov_delay);
+
 	driverConfigurator.configure();
 	clockConfigurator.configure();
 
-	bool clockOn = pNixieClock->isOn();
+	bool clockOn = pNixieClock->isOn() && mov.isOn();
 
 	pNixieClock->loop(nowMs);
 

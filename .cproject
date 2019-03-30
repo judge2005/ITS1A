@@ -24,7 +24,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncHttpClient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncTCP}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncTCP/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncWiFiManager}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/NixieDriver}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/NixieMisc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/OneNixieClock}&quot;"/>
@@ -54,6 +53,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ArduinoOTA}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/FauxmoESP}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/FauxmoESP/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncWiFiManagerOTC}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.cpp.sketch.input.1865345997" name="CPP source files" superClass="io.sloeber.compiler.cpp.sketch.input"/>
 							</tool>
@@ -64,7 +64,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncHttpClient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncTCP}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncTCP/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncWiFiManager}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/NixieDriver}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/NixieMisc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/OneNixieClock}&quot;"/>
@@ -94,6 +93,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ArduinoOTA}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/FauxmoESP}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/FauxmoESP/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncWiFiManagerOTC}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.c.sketch.input.1296702713" name="C Source Files" superClass="io.sloeber.compiler.c.sketch.input"/>
 							</tool>
@@ -104,7 +104,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncHttpClient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncTCP}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncTCP/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncWiFiManager}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/NixieDriver}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/NixieMisc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/OneNixieClock}&quot;"/>
@@ -134,6 +133,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ArduinoOTA}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/FauxmoESP}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/FauxmoESP/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ITS1A/libraries/ESPAsyncWiFiManagerOTC}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.S.sketch.input.1861504163" name="Assembly source files" superClass="io.sloeber.compiler.S.sketch.input"/>
 							</tool>
@@ -144,7 +144,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="libraries/FauxmoESP/docs|libraries/Configs/.git|libraries/ArduinoJson/scripts|libraries/ArduinoJson/fuzzing|libraries/ArduinoJson/.github|libraries/ESPAsyncWebServer/travis|libraries/OneNixieClock/.git|libraries/NixieMisc/.git|libraries/NixieDriver/.git|libraries/ESPAsyncTCP/travis|libraries/ESPAsyncTCP/ssl|libraries/?*/**/?xamples/**|libraries/?*/**/?xtras/**|libraries/?*/**/test*/**|libraries/?*/**/third-party/**|libraries/**/._*|libraries/?*/utility/*/*" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
+						<entry excluding="libraries/ESPAsyncWiFiManager/.git|libraries/ESPAsyncWebServer/.git|libraries/FauxmoESP/docs|libraries/Configs/.git|libraries/ArduinoJson/scripts|libraries/ArduinoJson/fuzzing|libraries/ArduinoJson/.github|libraries/ESPAsyncWebServer/travis|libraries/OneNixieClock/.git|libraries/NixieMisc/.git|libraries/NixieDriver/.git|libraries/ESPAsyncTCP/travis|libraries/ESPAsyncTCP/ssl|libraries/?*/**/?xamples/**|libraries/?*/**/?xtras/**|libraries/?*/**/test*/**|libraries/?*/**/third-party/**|libraries/**/._*|libraries/?*/utility/*/*" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
