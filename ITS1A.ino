@@ -1,6 +1,6 @@
 //#define DEBUG(...) { Serial.println(__VA_ARGS__); }
 #define DEBUG(...) { }
-#define NO_ALEXA
+#define ALEXA
 #define OTA
 
 #include "Arduino.h"
@@ -22,7 +22,7 @@
 #include <ESPAsyncWiFiManagerOTC.h> // https://github.com/judge2005/ESPAsyncWiFiManagerOTC
 #include <DNSServer.h>
 #ifdef ALEXA
-#include <fauxmoESP.h>              // https://bitbucket.org/xoseperez/fauxmoESP v3.1.0 ???
+#include <fauxmoESP.h>              // https://github.com/judge2005/FauxmoESP
 #endif
 #include <TimeLib.h>
 
