@@ -1,47 +1,47 @@
 //#define DEBUG(...) { Serial.println(__VA_ARGS__); }
 #define DEBUG(...) { }
-#define ALEXA
-//#define OTA
+#define NO_ALEXA
+#define OTA
 
 #include "Arduino.h"
-#include <ConfigItem.h>
-#include <EEPROMConfig.h>
+#include "ConfigItem.h"             // https://github.com/judge2005/Configs
+#include "EEPROMConfig.h"           //                  "
 #ifdef OTA
 #include <ArduinoOTA.h>
 #endif
 #include <EEPROM.h>
-#include <SPIFFSEditor.h>
+//#include <SPIFFSEditor.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <ESP8266mDNS.h>
-#include <ESPAsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <AsyncJson.h>
+#include <ESPAsyncTCP.h>            // https://github.com/me-no-dev/ESPAsyncTCP
+#include <ESPAsyncWebServer.h>      // https://github.com/me-no-dev/ESPAsyncWebServer
+#include <AsyncJson.h>              //                 "
 //#include <ESP8266HTTPClient.h>
-#include <ESPAsyncHTTPClient.h>
-#include <ESPAsyncWiFiManagerOTC.h>
+#include <ESPAsyncHTTPClient.h>     // https://github.com/judge2005/ESPAsyncHttpClient
+#include <ESPAsyncWiFiManagerOTC.h> // https://github.com/judge2005/ESPAsyncWiFiManagerOTC
 #include <DNSServer.h>
 #ifdef ALEXA
-#include <fauxmoESP.h>
+#include <fauxmoESP.h>              // https://bitbucket.org/xoseperez/fauxmoESP v3.1.0 ???
 #endif
 #include <TimeLib.h>
 
-#include <ITS1ANixieDriver.h>
-#include <OneNixieClock.h>
-#include <TwoNixieClock.h>
-#include <FourNixieClock.h>
-#include <SixNixieClock.h>
-#include <LEDs.h>
-#include <SoftMSTimer.h>
-#include <MovementSensor.h>
+#include <ITS1ANixieDriver.h>       // https://github.com/judge2005/NixieDriver
+#include <OneNixieClock.h>          // https://github.com/judge2005/OneNixieClock
+#include <TwoNixieClock.h>          //                 "
+#include <FourNixieClock.h>         //                 "
+#include <SixNixieClock.h>          //                 "
+#include <LEDs.h>                   // https://github.com/judge2005/NixieMisc
+#include <SoftMSTimer.h>            //                 "
+#include <MovementSensor.h>         //                 "
 
-#include <WSHandler.h>
-#include <WSMenuHandler.h>
-#include <WSConfigHandler.h>
-#include <WSGlobalConfigHandler.h>
-#include <WSPresetValuesHandler.h>
-#include <WSPresetNamesHandler.h>
-#include <WSInfoHandler.h>
+#include <WSHandler.h>              //                 "
+#include <WSMenuHandler.h>          //                 "
+#include <WSConfigHandler.h>        //                 "
+#include <WSGlobalConfigHandler.h>  //                 "
+#include <WSPresetValuesHandler.h>  //                 "
+#include <WSPresetNamesHandler.h>   //                 "
+#include <WSInfoHandler.h>          //                 "
 
 const byte MovPin = 3;	// PIR/Radar etc.
 
@@ -670,6 +670,7 @@ void eepromUpdate() {
 
 void snoozeUpdate();
 
+#ifdef ALEXA
 void startFauxMo() {
 	fauxmo.enable(true);
 	fauxmo.addDevice(CurrentConfig::date_name->value.c_str());
@@ -749,6 +750,7 @@ void startFauxMo() {
     	return ret;
     });
 }
+#endif
 
 void SetupServer() {
 	DEBUG("SetupServer()");
@@ -762,7 +764,9 @@ void SetupServer() {
 
 	getTime();
 
+#ifdef ALEXA
 	startFauxMo();
+#endif
 }
 
 SoftMSTimer::TimerInfo syncTimeTimer = {
