@@ -180,6 +180,7 @@ namespace CurrentConfig {
 	BooleanConfigItem *underlight = &ConfigSet1::underlight;
 	BooleanConfigItem *hue_cycling = &ConfigSet1::hue_cycling;
 	ByteConfigItem *led_scale = &ConfigSet1::led_scale;
+	ByteConfigItem *underlight_scale = &ConfigSet1::underlight_scale;
 	IntConfigItem *cycle_time = &ConfigSet1::cycle_time;
 
 	// Extra config values
@@ -238,6 +239,7 @@ namespace CurrentConfig {
 			underlight = static_cast<BooleanConfigItem*>(config->get("underlight"));
 			hue_cycling = static_cast<BooleanConfigItem*>(config->get("hue_cycling"));
 			led_scale = static_cast<ByteConfigItem*>(config->get("led_scale"));
+			underlight_scale = static_cast<ByteConfigItem*>(config->get("underlight_scale"));
 			cycle_time = static_cast<IntConfigItem*>(config->get("cycle_time"));
 
 			// Extra config values
@@ -380,48 +382,34 @@ const byte numLEDs = 10;
 #define LED_PIN 1
 LEDRGB leds(numLEDs, LED_PIN);
 
-void ledDisplay(bool backLight=true, bool underLight=true) {
-	// Scale normalized brightness to range 0..255
-	static byte brightness = 255;
-	if (!backLight && !underLight) {
-		if (brightness == 0) {
-			return;
-		} else {
-			brightness = 0;
-		}
-	} else {
-		if (brightness == 0) {
-			pinMode(LED_PIN, OUTPUT);
-			digitalWrite(LED_PIN, LOW);
-		}
-		brightness = *CurrentConfig::led_scale;
-	}
-
-	if (!backLight) {
+void setLedState(bool on, byte scale) {
+	if (!on) {
 		leds.setLedColorHSV(*CurrentConfig::hue, *CurrentConfig::saturation, 0);
 	} else {
-		leds.setLedColorHSV(*CurrentConfig::hue, *CurrentConfig::saturation, brightness);
+		leds.setLedColorHSV(*CurrentConfig::hue, *CurrentConfig::saturation, scale);
+	}
+}
+
+void ledDisplay(bool backLight=true, bool underLight=true) {
+	if (backLight || underLight) {
+		pinMode(LED_PIN, OUTPUT);
+		digitalWrite(LED_PIN, LOW);
 	}
 
+	setLedState(backLight, *CurrentConfig::led_scale);
 	for (int i=0; i<6; i++) {
 		leds.ledDisplay(i);
 	}
 
-	if (!underLight) {
-		leds.setLedColorHSV(*CurrentConfig::hue, *CurrentConfig::saturation, 0);
-	} else {
-		leds.setLedColorHSV(*CurrentConfig::hue, *CurrentConfig::saturation, brightness);
-	}
-
+	setLedState(underLight, *CurrentConfig::underlight_scale);
 	for (int i=6; i<10; i++) {
 		leds.ledDisplay(i);
 	}
 
 	leds.show();
 
-	if (brightness == 0) {
+	if (!backLight && !underLight) {
 		pinMode(LED_PIN, INPUT);
-//		digitalWrite(LED_PIN, HIGH);
 	}
 }
 
