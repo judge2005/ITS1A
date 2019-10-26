@@ -807,6 +807,8 @@ void setup()
 
 	initClock();
 
+	WiFi.setAutoReconnect(true);
+
 	createSSID();
 
 	server.serveStatic("/", SPIFFS, "/");
