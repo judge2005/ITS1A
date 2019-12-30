@@ -46,6 +46,9 @@ function resolveProperty(props, key, level) {
 function resolveProperties(props) {
 	Object.keys(props).forEach(function(key, index) {
 		props[key] = resolveProperty(props, key, 0);
+		if (props[key]) {
+			props[key] = props[key].replace(/\\\\/g, '\\').replace(/\\:/g, ':')
+		}
 	});
 }
 
@@ -62,12 +65,21 @@ gulp.task('load_properties', function(cb) {
 	}
 	
 	resolveProperties(props);
+	
+	if (!props["A.TOOLS.ESPTOOL.PATH"]) {
+		// Ughh
+		props["A.TOOLS.ESPTOOL.PATH"] = props["A.RUNTIME.TOOLS.ESPTOOL.PATH"];
+		props["A.TOOLS.ESPTOOL.CMD"] = props["A.UPLOAD.TOOL"];
+		props["A.UPLOAD.RESETMETHOD"] = "nodemcu";
+	}
+
 	props['A.BUILD.SPIFFS_SIZE'] = parseInt(props['A.BUILD.SPIFFS_END'].substring(2),16) - parseInt(props['A.BUILD.SPIFFS_START'].substring(2), 16);
 	
 	cb();	// Done
 });
 
 gulp.task('wired_spiff_upload', ['load_properties'], function(cb) {
+	var resteMethod=props["A.UPLOAD.RESETMETHOD"];
 	var args = [
 		"-cd ",
 		props["A.UPLOAD.RESETMETHOD"],
@@ -83,6 +95,7 @@ gulp.task('wired_spiff_upload', ['load_properties'], function(cb) {
 	
 	var cmd = props["A.TOOLS.ESPTOOL.PATH"] + "/" + props["A.TOOLS.ESPTOOL.CMD"];
 	log("Spawning task: ", cmd);
+	log(args);
 	var proc = spawn(cmd, args);
 	
 	proc.stdout.on('data', (data) => {
@@ -112,9 +125,11 @@ gulp.task('mkspiffs', ['buildfs_inline', 'load_properties'], function(cb) {
 		props["A.BUILD.SPIFFS_SIZE"],
 		spiffs_file
 	];
-		
+
+	
 	var cmd = props["A.TOOLS.MKSPIFFS.PATH"] + "/" + props["A.TOOLS.MKSPIFFS.CMD"];
 	log("Spawning task: ", cmd);
+	log(args);
 	var proc = spawn(cmd, args);
 	
 	proc.stdout.on('data', (data) => {

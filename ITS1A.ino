@@ -1,28 +1,37 @@
-//#define DEBUG(...) { Serial.println(__VA_ARGS__); }
+//#define DEBUG_ITS1A
+//#define DEBUG_ALT
+#if defined DEBUG_ITS1A //|| defined DEBUG_ALT
+#define DEBUG(...) { Serial.println(__VA_ARGS__); }
+Print *debugPrint = &Serial;
+#else
 #define DEBUG(...) { }
+#endif
+
 #define ALEXA
-#define OTA
+// Not enough space in ESP01 for SPIFFS, the app and an upload space.
+//#define OTA
 
 #include "Arduino.h"
 #include "ConfigItem.h"             // https://github.com/judge2005/Configs
 #include "EEPROMConfig.h"           //                  "
 #ifdef OTA
-#include <ArduinoOTA.h>
+#include "ASyncOTAWebUpdate.h"		// https://github.com/judge2005/ASyncOTAWebUpdate
 #endif
+
 #include <EEPROM.h>
-//#include <SPIFFSEditor.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <ESP8266mDNS.h>
 #include <ESPAsyncTCP.h>            // https://github.com/me-no-dev/ESPAsyncTCP
 #include <ESPAsyncWebServer.h>      // https://github.com/me-no-dev/ESPAsyncWebServer
 #include <AsyncJson.h>              //                 "
-//#include <ESP8266HTTPClient.h>
+#include <ESPAsyncDNSServer.h>		// https://github.com/devyte/ESPAsyncDNSServer
 #include <ESPAsyncHTTPClient.h>     // https://github.com/judge2005/ESPAsyncHttpClient
-#include <ESPAsyncWiFiManagerOTC.h> // https://github.com/judge2005/ESPAsyncWiFiManagerOTC
+#include <ESPAsyncWiFiManager.h>	// https://github.com/alanswx/ESPAsyncWiFiManager
 #include <DNSServer.h>
 #ifdef ALEXA
-#include <fauxmoESP.h>              // https://github.com/judge2005/FauxmoESP
+#include <fauxmoESP.h>              // https://bitbucket.org/xoseperez/fauxmoesp
+#include <HueColorUtils.h>
 #endif
 #include <TimeLib.h>
 
@@ -43,7 +52,11 @@
 #include <WSPresetNamesHandler.h>   //                 "
 #include <WSInfoHandler.h>          //                 "
 
+#ifdef DEBUG_ALT
+const byte MovPin = 13;	// PIR/Radar etc.
+#else
 const byte MovPin = 3;	// PIR/Radar etc.
+#endif
 
 unsigned long nowMs = 0;
 
@@ -55,8 +68,11 @@ StringConfigItem hostName("hostname", 63, "ITS1AClock");
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws"); // access at ws://[esp ip]/ws
 AsyncHTTPClient httpClient;
-DNSServer dns;
+AsyncDNSServer dns;
 AsyncWiFiManager wifiManager(&server,&dns);
+#ifdef OTA
+ASyncOTAWebUpdate otaUpdater(Update, "update", "secretsauce");
+#endif
 #ifdef ALEXA
 fauxmoESP fauxmo;
 #endif
@@ -65,6 +81,10 @@ NixieDriver *pDriver = &nixieDriver;
 SixNixieClock sixNixieClock(pDriver);
 NixieClock *pNixieClock = &sixNixieClock;
 bool timeInitialized = false;
+String lastUpdateTime = "Never";
+int failedCount = 0;
+String failedCountS("0");
+String lastFailedMessage = "";
 
 class Configurator {
 public:
@@ -342,7 +362,55 @@ void grabBytes(String s, byte *dest, String sep) {
 	}
 }
 
+SoftMSTimer::TimerInfo syncTimeTimer = {
+		3600000,	// 1 hour between syncs
+		0,
+		true,
+		getTime
+};
+
+void ledTimerHandler();
+SoftMSTimer::TimerInfo ledTimer = {
+		60000,
+		0,
+		false,
+		ledTimerHandler
+};
+
+SoftMSTimer::TimerInfo eepromUpdateTimer = {
+		60000,
+		0,
+		true,
+		eepromUpdate
+};
+
+#if defined DEBUG_ITS1A //|| defined DEBUG_ALT
+SoftMSTimer::TimerInfo memoryDumpTimer = {
+		5000,
+		0,
+		true,
+		memoryDumpHandler
+};
+#endif
+
+void memoryDumpHandler() {
+	DEBUG(ESP.getFreeHeap());
+}
+
+void getTime() {
+    DEBUG(*CurrentConfig::time_url);
+	syncTimeTimer.lastCallTick = millis();	// Sometimes we aren't called from the timer
+	if (WiFi.status() == WL_CONNECTED) {
+		httpClient.makeRequest(setTimeFromInternet, readTimeFailed);
+	} else {
+		syncTimeTimer.interval = 10000;	// Try again in 10 seconds
+	}
+}
+
 void readTimeFailed(String msg) {
+	failedCountS = String(++failedCount);
+	lastFailedMessage = msg;
+	syncTimeTimer.interval = 10000;	// Try again in 10 seconds
 	DEBUG(msg);
 }
 
@@ -360,26 +428,42 @@ void setTimeFromInternet() {
 	grabInts(body, &intValues[0], ",");
 
 	timeInitialized = true;
+//	failedCount = 0;
+	char buf[24];
+	sprintf(buf, "%02d:%02d:%02d %4d-%02d-%02d",
+			intValues[SYNC_HOURS],
+			intValues[SYNC_MINS],
+			intValues[SYNC_SECS],
+			intValues[SYNC_YEAR],
+			intValues[SYNC_MONTH],
+			intValues[SYNC_DAY]
+					  );
+	lastUpdateTime = buf;
+	syncTimeTimer.interval = 3600000;	// Try again in one hour
     setTime(intValues[SYNC_HOURS], intValues[SYNC_MINS], intValues[SYNC_SECS], intValues[SYNC_DAY], intValues[SYNC_MONTH], intValues[SYNC_YEAR]);
 }
 
-void setTimeFromWifiManager() {
-	static String oldWifiTime = "";
+void timeHandler(AsyncWebServerRequest *request) {
+	DEBUG("Got time request")
+	String wifiTime = request->getParam("time", true, false)->value();
 
-	const String &wifiTime = wifiManager.getWifiTime();
-	if (wifiTime != oldWifiTime) {
-		DEBUG(String("Setting time from wifi manager") + wifiTime);
-		int intValues[6];
-		grabInts(wifiTime, &intValues[0], ",");
+	DEBUG(String("Setting time from wifi manager") + wifiTime);
+	int intValues[6];
+	grabInts(wifiTime, &intValues[0], ",");
 
-		timeInitialized = true;
-		oldWifiTime = wifiTime;
-		setTime(intValues[SYNC_HOURS], intValues[SYNC_MINS], intValues[SYNC_SECS], intValues[SYNC_DAY], intValues[SYNC_MONTH], intValues[SYNC_YEAR]);
-	}
+	timeInitialized = true;
+	setTime(intValues[SYNC_HOURS], intValues[SYNC_MINS], intValues[SYNC_SECS],
+			intValues[SYNC_DAY], intValues[SYNC_MONTH], intValues[SYNC_YEAR]);
+
+	request->send(SPIFFS, "/time.html");
 }
 
 const byte numLEDs = 10;
+#ifdef DEBUG_ALT
+#define LED_PIN 12
+#else
 #define LED_PIN 1
+#endif
 LEDRGB leds(numLEDs, LED_PIN);
 
 void setLedState(bool on, byte scale) {
@@ -391,10 +475,12 @@ void setLedState(bool on, byte scale) {
 }
 
 void ledDisplay(bool backLight=true, bool underLight=true) {
+#ifndef DEBUG_ITS1A
 	if (backLight || underLight) {
 		pinMode(LED_PIN, OUTPUT);
 		digitalWrite(LED_PIN, LOW);
 	}
+#endif
 
 	setLedState(backLight, *CurrentConfig::led_scale);
 	for (int i=0; i<6; i++) {
@@ -406,11 +492,13 @@ void ledDisplay(bool backLight=true, bool underLight=true) {
 		leds.ledDisplay(i);
 	}
 
+#ifndef DEBUG_ITS1A
 	leds.show();
 
 	if (!backLight && !underLight) {
 		pinMode(LED_PIN, INPUT);
 	}
+#endif
 }
 
 void ledTimerHandler() {
@@ -439,43 +527,6 @@ void initFromEEPROM() {
 void createSSID() {
 	// Create a unique SSID that includes the hostname. Max SSID length is 32!
 	ssid = (chipId + hostName).substring(0, 31);
-}
-
-void getTime() {
-	if (WiFi.status() == WL_CONNECTED) {
-		httpClient.makeRequest(setTimeFromInternet, readTimeFailed);
-	}
-}
-
-void StartOTA() {
-#ifdef OTA
-	// Port defaults to 8266
-	ArduinoOTA.setPort(8266);
-
-	// Hostname defaults to esp8266-[ChipID]
-	ArduinoOTA.setHostname(((String)hostName).c_str());
-
-	// No authentication by default
-//	ArduinoOTA.setPassword("in14");
-
-	ArduinoOTA.onStart([]() {DEBUG("OTA Start");});
-	ArduinoOTA.onEnd([]() {DEBUG("\nOTA End");});
-	ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-		DEBUG("OTA Progress: ");DEBUG(progress / (total / 100));DEBUG("\r");
-	});
-	ArduinoOTA.onError([](ota_error_t error) {
-		DEBUG("OTA Error:")
-		switch (error) {
-			case OTA_AUTH_ERROR: DEBUG("Auth Failed"); break;
-			case OTA_BEGIN_ERROR: DEBUG("Begin Failed"); break;
-			case OTA_CONNECT_ERROR: DEBUG("Connect Failed"); break;
-			case OTA_RECEIVE_ERROR: DEBUG("Receive Failed"); break;
-			case OTA_END_ERROR: DEBUG("End Failed"); break;
-		}
-	});
-
-	ArduinoOTA.begin();
-#endif //OTA
 }
 
 void mainHandler(AsyncWebServerRequest *request) {
@@ -507,6 +558,10 @@ void broadcastUpdate(const BaseConfigItem& item) {
         root.printTo((char *)buffer->get(), len + 1);
     	ws.textAll(buffer);
     }
+
+#ifdef ALEXA
+	updateFauxMoValues();
+#endif
 }
 
 WSConfigHandler wsClockHandler(rootConfig, "clock");
@@ -514,14 +569,16 @@ WSConfigHandler wsLEDHandler(rootConfig, "leds");
 WSConfigHandler wsExtraHandler(rootConfig, "extra");
 WSGlobalConfigHandler wsAlexaHandler(rootConfig, "alexa");
 WSPresetValuesHandler wsPresetValuesHandler(rootConfig);
-WSInfoHandler wsInfoHandler(ssid);
+WSInfoHandler wsInfoHandler(ssid, lastUpdateTime, lastFailedMessage, failedCountS);
 WSPresetNamesHandler wsPresetNamesHandler(rootConfig);
 
 String *items[] = {
 	&WSMenuHandler::clockMenu,
 	&WSMenuHandler::ledsMenu,
 	&WSMenuHandler::extraMenu,
+#ifdef ALEXA
 	&WSMenuHandler::alexaMenu,
+#endif
 	&WSMenuHandler::presetsMenu,
 	&WSMenuHandler::infoMenu,
 	&WSMenuHandler::presetNamesMenu,
@@ -582,6 +639,7 @@ void updateValue(int screen, String pair) {
 			// TODO: This won't work if we just switch change sets instead!
 #ifndef USE_NTP
 			if (strcmp(key, CurrentConfig::time_url->name) == 0) {
+				DEBUG(value);
 				httpClient.initialize(value);
 				getTime();
 			}
@@ -652,6 +710,22 @@ void wsHandler(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 	}
 }
 
+#ifdef OTA
+void sendUpdateForm(AsyncWebServerRequest *request) {
+	request->send(SPIFFS, "/update.html");
+}
+
+void sendUpdatingInfo(AsyncResponseStream *response, boolean hasError) {
+    response->print("<html><head><meta http-equiv=\"refresh\" content=\"10; url=/\"></head><body>");
+
+    hasError ?
+    		response->print("Update failed: please wait while the device reboots") :
+    		response->print("Update OK: please wait while the device reboots");
+
+    response->print("</body></html>");
+}
+#endif
+
 void eepromUpdate() {
 	config.commit();
 }
@@ -659,28 +733,106 @@ void eepromUpdate() {
 void snoozeUpdate();
 
 #ifdef ALEXA
-void startFauxMo() {
-	fauxmo.enable(true);
-	fauxmo.addDevice(CurrentConfig::date_name->value.c_str());
-	fauxmo.addDevice(CurrentConfig::backlight_name->value.c_str());
-	fauxmo.addDevice(CurrentConfig::underlight_name->value.c_str());
-	fauxmo.addDevice(CurrentConfig::clock_name->value.c_str());
-	fauxmo.addDevice(CurrentConfig::test_name->value.c_str());
-	fauxmo.addDevice(CurrentConfig::cycling_name->value.c_str());
-	fauxmo.addDevice(CurrentConfig::twelve_hour_name->value.c_str());
-	fauxmo.addDevice(CurrentConfig::zero_name->value.c_str());
+void updateFauxMoValues() {
+	fauxmo.setState((unsigned char)0, !(*CurrentConfig::time_or_date), *CurrentConfig::time_or_date ? 0 : 255, 0, 0);
 
-    fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state) {
+	XYPoint xy = HueColorUtils::HSToXY(
+			round(((int)(*CurrentConfig::hue)) * 360.0 / 255.0),
+			((double)(*CurrentConfig::saturation)) / 255.0,
+			0
+			);
+	fauxmo.setState(1, *CurrentConfig::backlight, *CurrentConfig::led_scale, xy.x, xy.y);
+	fauxmo.setState(2, *CurrentConfig::underlight, *CurrentConfig::underlight_scale, xy.x, xy.y);
+
+	fauxmo.setState(3, *CurrentConfig::hv, *CurrentConfig::hv ? 255 : 0, 0, 0);
+	fauxmo.setState(4, !(*CurrentConfig::display), !(*CurrentConfig::display) ? 0 : 255, 0, 0);
+	fauxmo.setState(5, *CurrentConfig::hue_cycling, *CurrentConfig::hue_cycling ? 255 : 0, 0, 0);
+	fauxmo.setState(6, *CurrentConfig::hour_format, *CurrentConfig::hour_format ? 255 : 0, 0, 0);
+	fauxmo.setState(7, *CurrentConfig::leading_zero, *CurrentConfig::leading_zero ? 255 : 0, 0, 0);
+}
+
+void startFauxMo() {
+    fauxmo.createServer(false);
+    fauxmo.setPort(80); // This is required for gen3 devices
+
+    // You have to call enable(true) once you have a WiFi connection
+    // You can enable or disable the library at any moment
+    // Disabling it will prevent the devices from being discovered and switched
+	fauxmo.enable(true);
+
+	fauxmo.addDevice(CurrentConfig::date_name->value.c_str(), "Dimmable Light", "LOM001");
+	fauxmo.addDevice(CurrentConfig::backlight_name->value.c_str(), "Extended Color light", "LCT015");
+	fauxmo.addDevice(CurrentConfig::underlight_name->value.c_str(), "Extended Color light", "LCT015");
+	fauxmo.addDevice(CurrentConfig::clock_name->value.c_str(), "Dimmable Light", "LOM001");
+	fauxmo.addDevice(CurrentConfig::test_name->value.c_str(), "Dimmable Light", "LWB004");
+	fauxmo.addDevice(CurrentConfig::cycling_name->value.c_str(), "Dimmable Light", "LOM001");
+	fauxmo.addDevice(CurrentConfig::twelve_hour_name->value.c_str(), "Dimmable Light", "LOM001");
+	fauxmo.addDevice(CurrentConfig::zero_name->value.c_str(), "Dimmable Light", "LOM001");
+
+	updateFauxMoValues();
+
+	// These two callbacks are required for gen1 and gen3 compatibility
+    server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), String((char *)data))) {
+        	return;
+        }
+        // Handle any other body request here...
+		DEBUG("Passing on: ");
+		DEBUG(request->host());
+		DEBUG(request->url());
+    });
+
+    server.onNotFound([](AsyncWebServerRequest *request) {
+        String body = (request->hasParam("body", true)) ? request->getParam("body", true)->value() : String();
+        if (!fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), body)) {
+        	// re-direct to root, i.e. brute force the captive portal if in AP mode.
+        	if (!request->host().equals(request->client()->localIP().toString())) {
+				DEBUG(String("Redirecting: ") + request->client()->localIP().toString());
+				DEBUG(request->host());
+				DEBUG(request->url());
+				AsyncWebServerResponse *response = request->beginResponse(302,"text/plain","");
+				response->addHeader("Location", String("http://") + request->client()->localIP().toString());
+				response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+				response->addHeader("Pragma", "no-cache");
+				response->addHeader("Expires", "-1");
+				request->send ( response);
+			} else {
+				DEBUG("Sending not found");
+				AsyncWebServerResponse *response = request->beginResponse(404,"text/plain","Not found");
+				response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+				response->addHeader("Pragma", "no-cache");
+				response->addHeader("Expires", "-1");
+				request->send (response );
+			}
+        }
+    });
+
+    fauxmo.onSetState([](unsigned char device_id, const char * device_name, bool state, unsigned char value, float x, float y) {
     	BooleanConfigItem *item = 0;
+    	ByteConfigItem *valueItem = 0;
+    	ByteConfigItem *hueItem = 0;
+    	ByteConfigItem *saturationItem = 0;
     	switch (device_id) {
     	case 0:
     		item = &(*CurrentConfig::time_or_date = !state);
     		break;
     	case 1:
-    		item = &(*CurrentConfig::backlight = state);
-    		break;
+    		{
+				item = &(*CurrentConfig::backlight = state);
+				HS hs = HueColorUtils::XYToHS(x, y, 0);
+				hueItem = &(*CurrentConfig::hue = (byte)round(hs.h * 255.0 / 360.0));
+				saturationItem = &(*CurrentConfig::saturation = (byte)round(hs.s * 255));
+				valueItem = &(*CurrentConfig::led_scale = value);
+    		}
+        	break;
     	case 2:
-    		item = &(*CurrentConfig::underlight = state);
+			{
+				item = &(*CurrentConfig::underlight = state);
+				HS hs = HueColorUtils::XYToHS(x, y, 0);
+				hueItem = &(*CurrentConfig::hue = (byte)round(hs.h * 255.0 / 360.0));
+				saturationItem = &(*CurrentConfig::saturation = (byte)round(hs.s * 255));
+				valueItem = &(*CurrentConfig::underlight_scale = value);
+			}
     		break;
     	case 3:
     		item = &(*CurrentConfig::hv = state);
@@ -701,41 +853,23 @@ void startFauxMo() {
 
     	if (item != 0) {
     		item->put();
-    	}
-    	broadcastUpdate(*item);
-    });
-    fauxmo.onGetState([](unsigned char device_id, const char * device_name) {
-    	bool ret = false;
-    	switch (device_id) {
-    	case 0:
-    		ret = *CurrentConfig::time_or_date;
-    		ret = !ret;
-    		break;
-    	case 1:
-    		ret = *CurrentConfig::backlight;
-    		break;
-    	case 2:
-    		ret = *CurrentConfig::underlight;
-    		break;
-    	case 3:
-    		ret = *CurrentConfig::hv;
-    		break;
-    	case 4:
-    		ret = *CurrentConfig::display;
-    		ret = !ret;
-    		break;
-    	case 5:
-    		ret = *CurrentConfig::hue_cycling;
-    		break;
-    	case 6:
-    		ret = *CurrentConfig::hour_format;
-    		break;
-    	case 7:
-    		ret = *CurrentConfig::leading_zero;
-    		break;
+        	broadcastUpdate(*item);
     	}
 
-    	return ret;
+    	if (hueItem != 0) {
+    		hueItem->put();
+        	broadcastUpdate(*hueItem);
+    	}
+
+    	if (saturationItem != 0) {
+    		saturationItem->put();
+        	broadcastUpdate(*saturationItem);
+    	}
+
+    	if (valueItem != 0) {
+    		valueItem->put();
+        	broadcastUpdate(*valueItem);
+    	}
     });
 }
 #endif
@@ -746,42 +880,22 @@ void SetupServer() {
 	hostName.put();
 	config.commit();
 	DEBUG(hostName.value);
-	MDNS.begin(hostName.value.c_str());
-    MDNS.addService("http", "tcp", 80);
-	StartOTA();
+	if (WiFi.status() == WL_CONNECTED) {
+		DEBUG("WiFi connected, setting up responder");
+		MDNS.begin(hostName.value.c_str(), WiFi.localIP());
+		MDNS.addService("http", "tcp", 80);
+	}
 
 	getTime();
-
-#ifdef ALEXA
-	startFauxMo();
-#endif
 }
-
-SoftMSTimer::TimerInfo syncTimeTimer = {
-		3600000,	// 1 hour between syncs
-		0,
-		true,
-		getTime
-};
-
-SoftMSTimer::TimerInfo ledTimer = {
-		60000,
-		0,
-		true,
-		ledTimerHandler
-};
-
-SoftMSTimer::TimerInfo eepromUpdateTimer = {
-		60000,
-		0,
-		true,
-		eepromUpdate
-};
 
 SoftMSTimer::TimerInfo *infos[] = {
 		&syncTimeTimer,
 		&ledTimer,
 		&eepromUpdateTimer,
+#if defined DEBUG_ITS1A //|| defined DEBUG_ALT
+		&memoryDumpTimer,
+#endif
 		0
 };
 
@@ -789,32 +903,65 @@ SoftMSTimer timedFunctions(infos);
 
 void setup()
 {
+#if !defined DEBUG_ITS1A && !defined DEBUG_ALT
 	pinMode(MovPin, FUNCTION_3);
+	pinMode(LED_PIN, FUNCTION_3);
+#endif
+
+#ifndef DEBUG_ITS1A
 	pinMode(MovPin, INPUT_PULLUP);
+#endif
 
 	chipId.toUpperCase();
 //	Serial.begin(921600);
-//	Serial.begin(115200);
+#if defined DEBUG_ITS1A || defined DEBUG_ALT
+	Serial.begin(115200);
+#endif
 
-	EEPROM.begin(1024);
+	EEPROM.begin(2048);
 	SPIFFS.begin();
 
 	initFromEEPROM();
 
+	httpClient.initialize(*CurrentConfig::time_url);
+
 	// Enable LEDs
+#ifndef DEBUG_ITS1A
 	leds.begin();
 	ledDisplay(*CurrentConfig::backlight, *CurrentConfig::underlight);
+#endif
 
 	initClock();
 
+//	dns.setTTL(1);
+	WiFi.setSleepMode(WIFI_NONE_SLEEP);
 	WiFi.setAutoReconnect(true);
 
 	createSSID();
 
+	DEBUG("Set wifiManager")
+#if defined DEBUG_ITS1A //|| defined DEBUG_ALT
+	wifiManager.setDebugOutput(true);
+#else
+	wifiManager.setDebugOutput(false);
+#endif
+
+	wifiManager.setCustomOptionsElement("<br><form action='/t' name='time_form' method='post'><button name='time' onClick=\"{var now=new Date();this.value=now.getFullYear()+','+(now.getMonth()+1)+','+now.getDate()+','+now.getHours()+','+now.getMinutes()+','+now.getSeconds();} return true;\">Set Clock Time</button></form><br><form action=\"/app.html\" method=\"get\"><button>Configure Clock</button></form>");
+	wifiManager.setConnectTimeout(10);
+	wifiManager.addParameter(hostnameParam);
+	wifiManager.setSaveConfigCallback(SetupServer);
+    wifiManager.startConfigPortalModeless(ssid.c_str(), "secretsauce");
+
+    // This has to be done AFTER the wifiManager setup, because the wifimanager resets
+    // the server which causes a crash...
 	server.serveStatic("/", SPIFFS, "/");
 	server.on("/", HTTP_GET, mainHandler).setFilter(ON_STA_FILTER);
 	server.on("/assets/favicon-32x32.png", HTTP_GET, sendFavicon);
 	server.serveStatic("/assets", SPIFFS, "/assets");
+	server.on("/t", HTTP_POST, timeHandler).setFilter(ON_AP_FILTER);
+#ifdef OTA
+	otaUpdater.init(server, "/update", sendUpdateForm, sendUpdatingInfo);
+#endif
 
 	// attach AsyncWebSocket
 	ws.onEvent(wsHandler);
@@ -822,20 +969,16 @@ void setup()
 	server.begin();
 	ws.enable(true);
 
-	DEBUG("Set wifiManager")
-	wifiManager.setDebugOutput(true);
-	wifiManager.setConnectTimeout(10);
-	wifiManager.addParameter(hostnameParam);
-	wifiManager.setSaveConfigCallback(SetupServer);
-    wifiManager.startConfigPortalModeless(ssid.c_str(), "secretsauce");
-
-	httpClient.initialize(*CurrentConfig::time_url);
-	getTime();
+#ifdef ALEXA
+	startFauxMo();
+#endif
 
 	nowMs = millis();
 
+#ifndef DEBUG_ITS1A
 	mov.setDelay(1);
 	mov.setOnTime(nowMs);
+#endif
 
 	DEBUG("Exit setup")
 }
@@ -845,11 +988,10 @@ unsigned long nextMs = 0;
 
 void loop()
 {
-#ifdef OTA
-	ArduinoOTA.handle();
-#endif
+	if (WiFi.status() == WL_CONNECTED) {
+		MDNS.update();
+	}
 	wifiManager.loop();
-	setTimeFromWifiManager();
 #ifdef ALEXA
 	fauxmo.handle();
 #endif
@@ -861,9 +1003,13 @@ void loop()
 	driverConfigurator.configure();
 	clockConfigurator.configure();
 
-	bool clockOn = pNixieClock->isOn() && mov.isOn();
-
 	pNixieClock->loop(nowMs);
+
+#ifndef DEBUG_ITS1A
+	bool clockOn = pNixieClock->isOn() && mov.isOn();
+#else
+	bool clockOn = pNixieClock->isOn();
+#endif
 
 	if ((*CurrentConfig::backlight || *CurrentConfig::underlight) && clockOn) {
 		ledTimer.interval = *CurrentConfig::cycle_time * 1000L / 256;

@@ -1,8 +1,36 @@
+Exception (9):
+epc1=0x4020d55c epc2=0x00000000 epc3=0x00000000 excvaddr=0x74787409 depc=0x00000000
+
+>>>stack>>>
+
+ctx: sys
+sp: 3ffffce0 end: 3fffffb0 offset: 01a0
+3ffffe80:  347b0f4a 00000030 00000010 3fff3856  
+3ffffe90:  3fff8724 0000002f 3fff79e4 4020d58d  
+3ffffea0:  3fff8724 0000002f 3fff79e4 40213428  
+3ffffeb0:  3fff7844 3fff3854 3fff3855 40213448  
+3ffffec0:  3fff7844 3fff3854 3fff3855 40234300  
+3ffffed0:  00004d38 000009a7 000009a7 00000038  
+3ffffee0:  3fff39c0 2c01a8c0 00000020 40100e4c  
+3ffffef0:  00000000 000007d5 000007d5 3fff39c0  
+3fffff00:  3fff7b02 3fff3a60 3fff39c0 4023863d  
+3fffff10:  3fff7ae4 00000014 00000000 40100e17  
+3fffff20:  4024a798 3fff796c 3fff435c 3fff43d4  
+3fffff30:  00000008 3fff39c0 3fff7ae4 4023171d  
+3fffff40:  3fffdc80 3fff435c 3fff796c 40231547  
+3fffff50:  4024f49a 3fff435c 3fff796c 4024f4ab  
+3fffff60:  3fff7af4 3fff7ae4 00000000 3ffe89a0  
+3fffff70:  4024a3bf 00000000 3fff796c 4025125f  
+3fffff80:  40000f49 3fffdab0 3fffdab0 40000f49  
+3fffff90:  40000e19 40001878 00000002 00000000  
+3fffffa0:  3fffff10 aa55aa55 000000ae 4010552c  
+<<<stack<<<
+
  ets Jan  8 2013,rst cause:2, boot mode:(3,6)
 
 load 0x4010f000, len 1384, room 16 
 tail 8
 chksum 0x2d
 csum 0x2d
-v3ffea88c
+v482516e3
 ~ld

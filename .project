@@ -34,12 +34,17 @@
 		<link>
 			<name>core/core</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.3.0/cores/esp8266</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/cores/esp8266</locationURI>
 		</link>
 		<link>
 			<name>core/variant</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.3.0/variants/generic</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/variants/generic</locationURI>
+		</link>
+		<link>
+			<name>libraries/ASyncOTAWebUpdate</name>
+			<type>2</type>
+			<location>C:/Users/mpand/Documents/Arduino/libraries/ASyncOTAWebUpdate</location>
 		</link>
 		<link>
 			<name>libraries/Adafruit_LIS3DH</name>
@@ -59,7 +64,7 @@
 		<link>
 			<name>libraries/Adafruit_Unified_Sensor</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/Adafruit_Unified_Sensor/1.0.2</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/Adafruit_Unified_Sensor/1.0.3</locationURI>
 		</link>
 		<link>
 			<name>libraries/ArduinoJson</name>
@@ -69,7 +74,7 @@
 		<link>
 			<name>libraries/ArduinoOTA</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.3.0/libraries/ArduinoOTA</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/ArduinoOTA</locationURI>
 		</link>
 		<link>
 			<name>libraries/Configs</name>
@@ -79,22 +84,27 @@
 		<link>
 			<name>libraries/DNSServer</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.3.0/libraries/DNSServer</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/DNSServer</locationURI>
 		</link>
 		<link>
 			<name>libraries/EEPROM</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.3.0/libraries/EEPROM</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/EEPROM</locationURI>
 		</link>
 		<link>
 			<name>libraries/ESP8266WiFi</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.3.0/libraries/ESP8266WiFi</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/ESP8266WiFi</locationURI>
 		</link>
 		<link>
 			<name>libraries/ESP8266mDNS</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.3.0/libraries/ESP8266mDNS</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/ESP8266mDNS</locationURI>
+		</link>
+		<link>
+			<name>libraries/ESPAsyncDNSServer</name>
+			<type>2</type>
+			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPAsyncDNSServer</location>
 		</link>
 		<link>
 			<name>libraries/ESPAsyncHttpClient</name>
@@ -107,24 +117,24 @@
 			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPAsyncTCP</location>
 		</link>
 		<link>
+			<name>libraries/ESPAsyncUDP</name>
+			<type>2</type>
+			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPAsyncUDP</location>
+		</link>
+		<link>
 			<name>libraries/ESPAsyncWebServer</name>
 			<type>2</type>
 			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPAsyncWebServer</location>
 		</link>
 		<link>
-			<name>libraries/ESPAsyncWiFiManagerOTC</name>
+			<name>libraries/ESPAsyncWiFiManager</name>
 			<type>2</type>
-			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPAsyncWiFiManagerOTC</location>
-		</link>
-		<link>
-			<name>libraries/FauxmoESP</name>
-			<type>2</type>
-			<location>C:/Users/mpand/Documents/Arduino/libraries/FauxmoESP</location>
+			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPAsyncWiFiManager</location>
 		</link>
 		<link>
 			<name>libraries/Hash</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.3.0/libraries/Hash</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/Hash</locationURI>
 		</link>
 		<link>
 			<name>libraries/NixieDriver</name>
@@ -144,7 +154,7 @@
 		<link>
 			<name>libraries/SPI</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.3.0/libraries/SPI</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/SPI</locationURI>
 		</link>
 		<link>
 			<name>libraries/Time</name>
@@ -164,7 +174,12 @@
 		<link>
 			<name>libraries/Wire</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.3.0/libraries/Wire</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/Wire</locationURI>
+		</link>
+		<link>
+			<name>libraries/fauxmoesp</name>
+			<type>2</type>
+			<location>C:/Users/mpand/Documents/Arduino/libraries/fauxmoesp</location>
 		</link>
 	</linkedResources>
 </projectDescription>

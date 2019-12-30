@@ -78,7 +78,11 @@
 		props['project_loc'] = properties['project_loc']
 		new File(properties['project_loc'] + './.settings/org.eclipse.cdt.core.prefs').eachLine { line ->
 		    if ((matcher = line =~ /.*\/([AJ].+)\/value=(.+)$/)) {
-		        props[matcher[0][1]] = matcher[0][2]
+				def val = matcher[0][2];
+				if (val != null) {
+					val = val.replace('\\:', ':');
+				}
+		        props[matcher[0][1]] = val;
 		    }
 		}
 		props.each{ k, v -> 
