@@ -30,8 +30,8 @@ Print *debugPrint = &Serial;
 #include <ESPAsyncWiFiManager.h>	// https://github.com/alanswx/ESPAsyncWiFiManager
 #include <DNSServer.h>
 #ifdef ALEXA
-#include <fauxmoESP.h>              // https://bitbucket.org/xoseperez/fauxmoesp
-#include <HueColorUtils.h>
+#include <fauxmoESP.h>              // https://bitbucket.org/judge2005/fauxmoesp
+#include <HueColorUtils.h>			//                 "
 #endif
 #include <TimeLib.h>
 
