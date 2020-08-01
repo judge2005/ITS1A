@@ -34,12 +34,12 @@
 		<link>
 			<name>core/core</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/cores/esp8266</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/cores/esp8266</locationURI>
 		</link>
 		<link>
 			<name>core/variant</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/variants/generic</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/variants/generic</locationURI>
 		</link>
 		<link>
 			<name>libraries/ASyncOTAWebUpdate</name>
@@ -74,7 +74,7 @@
 		<link>
 			<name>libraries/ArduinoOTA</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/ArduinoOTA</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/libraries/ArduinoOTA</locationURI>
 		</link>
 		<link>
 			<name>libraries/Configs</name>
@@ -84,22 +84,22 @@
 		<link>
 			<name>libraries/DNSServer</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/DNSServer</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/libraries/DNSServer</locationURI>
 		</link>
 		<link>
 			<name>libraries/EEPROM</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/EEPROM</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/libraries/EEPROM</locationURI>
 		</link>
 		<link>
 			<name>libraries/ESP8266WiFi</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/ESP8266WiFi</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/libraries/ESP8266WiFi</locationURI>
 		</link>
 		<link>
 			<name>libraries/ESP8266mDNS</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/ESP8266mDNS</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/libraries/ESP8266mDNS</locationURI>
 		</link>
 		<link>
 			<name>libraries/ESPAsyncDNSServer</name>
@@ -132,9 +132,19 @@
 			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPAsyncWiFiManager</location>
 		</link>
 		<link>
+			<name>libraries/ESPPerfectTime</name>
+			<type>2</type>
+			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPPerfectTime</location>
+		</link>
+		<link>
 			<name>libraries/Hash</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/Hash</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/libraries/Hash</locationURI>
+		</link>
+		<link>
+			<name>libraries/NeoPixelBus</name>
+			<type>2</type>
+			<location>C:/Users/mpand/Documents/Arduino/libraries/NeoPixelBus</location>
 		</link>
 		<link>
 			<name>libraries/NixieDriver</name>
@@ -154,12 +164,17 @@
 		<link>
 			<name>libraries/SPI</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/SPI</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/libraries/SPI</locationURI>
 		</link>
 		<link>
 			<name>libraries/Time</name>
 			<type>2</type>
 			<location>C:/Users/mpand/Documents/Arduino/libraries/Time</location>
+		</link>
+		<link>
+			<name>libraries/TimeSync</name>
+			<type>2</type>
+			<location>C:/Users/mpand/Documents/Arduino/libraries/TimeSync</location>
 		</link>
 		<link>
 			<name>libraries/U8g2</name>
@@ -174,7 +189,7 @@
 		<link>
 			<name>libraries/Wire</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.6.1/libraries/Wire</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/libraries/Wire</locationURI>
 		</link>
 		<link>
 			<name>libraries/fauxmoesp</name>

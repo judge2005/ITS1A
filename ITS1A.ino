@@ -26,21 +26,17 @@ Print *debugPrint = &Serial;
 #include <ESPAsyncWebServer.h>      // https://github.com/me-no-dev/ESPAsyncWebServer
 #include <AsyncJson.h>              //                 "
 #include <ESPAsyncDNSServer.h>		// https://github.com/devyte/ESPAsyncDNSServer
-#include <ESPAsyncHTTPClient.h>     // https://github.com/judge2005/ESPAsyncHttpClient
 #include <ESPAsyncWiFiManager.h>	// https://github.com/alanswx/ESPAsyncWiFiManager
 #include <DNSServer.h>
+#include <NeoPixelBus.h>
+#include <EspSNTPTimeSync.h>		// https://github.com/judge2005/TimeSync
 #ifdef ALEXA
 #include <fauxmoESP.h>              // https://bitbucket.org/judge2005/fauxmoesp
 #include <HueColorUtils.h>			//                 "
 #endif
-#include <TimeLib.h>
 
 #include <ITS1ANixieDriver.h>       // https://github.com/judge2005/NixieDriver
-#include <OneNixieClock.h>          // https://github.com/judge2005/OneNixieClock
-#include <TwoNixieClock.h>          //                 "
-#include <FourNixieClock.h>         //                 "
 #include <SixNixieClock.h>          //                 "
-#include <LEDs.h>                   // https://github.com/judge2005/NixieMisc
 #include <SoftMSTimer.h>            //                 "
 #include <MovementSensor.h>         //                 "
 
@@ -67,9 +63,10 @@ StringConfigItem hostName("hostname", 63, "ITS1AClock");
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws"); // access at ws://[esp ip]/ws
-AsyncHTTPClient httpClient;
 AsyncDNSServer dns;
 AsyncWiFiManager wifiManager(&server,&dns);
+TimeSync *timeSync;
+
 #ifdef OTA
 ASyncOTAWebUpdate otaUpdater(Update, "update", "secretsauce");
 #endif
@@ -80,16 +77,13 @@ ITS1ANixieDriver nixieDriver(6);
 NixieDriver *pDriver = &nixieDriver;
 SixNixieClock sixNixieClock(pDriver);
 NixieClock *pNixieClock = &sixNixieClock;
-bool timeInitialized = false;
-String lastUpdateTime = "Never";
-int failedCount = 0;
-String failedCountS("0");
-String lastFailedMessage = "";
 
 class Configurator {
 public:
 	virtual void configure() = 0;
 };
+
+void infoCallback();
 
 namespace ConfigSet1 {
 #include <ITS1AConfigSet1.h>
@@ -281,6 +275,7 @@ namespace CurrentConfig {
 }
 
 MovementSensor mov(MovPin);
+BlankTimeMonitor blankingMonitor;
 
 class ITS1ANixieDriverConfigurator : Configurator {
 public:
@@ -304,7 +299,7 @@ public:
 	}
 
 	virtual void configure() {
-		if (timeInitialized || !*CurrentConfig::display) {
+		if (timeSync->initialized() || !*CurrentConfig::display) {
 			clock.setClockMode(*CurrentConfig::display);
 			clock.setCountSpeed(*CurrentConfig::test_speed);
 		} else {
@@ -334,40 +329,10 @@ SixNixieClockConfigurator clockConfigurator(sixNixieClock);
 
 void initClock() {
 	pDriver->init();
+	pNixieClock->setTimeSync(timeSync);
 	pNixieClock->setNixieDriver(pDriver);
 	pNixieClock->init();
 }
-
-void grabInts(String s, int *dest, String sep) {
-	int end = 0;
-	for (int start = 0; end != -1; start = end + 1) {
-		end = s.indexOf(sep, start);
-		if (end > 0) {
-			*dest++ = s.substring(start, end).toInt();
-		} else {
-			*dest++ = s.substring(start).toInt();
-		}
-	}
-}
-
-void grabBytes(String s, byte *dest, String sep) {
-	int end = 0;
-	for (int start = 0; end != -1; start = end + 1) {
-		end = s.indexOf(sep, start);
-		if (end > 0) {
-			*dest++ = s.substring(start, end).toInt();
-		} else {
-			*dest++ = s.substring(start).toInt();
-		}
-	}
-}
-
-SoftMSTimer::TimerInfo syncTimeTimer = {
-		3600000,	// 1 hour between syncs
-		0,
-		true,
-		getTime
-};
 
 void ledTimerHandler();
 SoftMSTimer::TimerInfo ledTimer = {
@@ -397,107 +362,42 @@ void memoryDumpHandler() {
 	DEBUG(ESP.getFreeHeap());
 }
 
-void getTime() {
-    DEBUG(*CurrentConfig::time_url);
-	syncTimeTimer.lastCallTick = millis();	// Sometimes we aren't called from the timer
-	if (WiFi.status() == WL_CONNECTED) {
-		httpClient.makeRequest(setTimeFromInternet, readTimeFailed);
-	} else {
-		syncTimeTimer.interval = 10000;	// Try again in 10 seconds
-	}
-}
-
-void readTimeFailed(String msg) {
-	failedCountS = String(++failedCount);
-	lastFailedMessage = msg;
-	syncTimeTimer.interval = 10000;	// Try again in 10 seconds
-	DEBUG(msg);
-}
-
-#define SYNC_HOURS 3
-#define SYNC_MINS 4
-#define SYNC_SECS 5
-#define SYNC_DAY 2
-#define SYNC_MONTH 1
-#define SYNC_YEAR 0
-
-void setTimeFromInternet() {
-	String body = httpClient.getBody();
-	DEBUG(String("Got response") + body);
-	int intValues[6];
-	grabInts(body, &intValues[0], ",");
-
-	timeInitialized = true;
-//	failedCount = 0;
-	char buf[24];
-	sprintf(buf, "%02d:%02d:%02d %4d-%02d-%02d",
-			intValues[SYNC_HOURS],
-			intValues[SYNC_MINS],
-			intValues[SYNC_SECS],
-			intValues[SYNC_YEAR],
-			intValues[SYNC_MONTH],
-			intValues[SYNC_DAY]
-					  );
-	lastUpdateTime = buf;
-	syncTimeTimer.interval = 3600000;	// Try again in one hour
-    setTime(intValues[SYNC_HOURS], intValues[SYNC_MINS], intValues[SYNC_SECS], intValues[SYNC_DAY], intValues[SYNC_MONTH], intValues[SYNC_YEAR]);
-}
-
 void timeHandler(AsyncWebServerRequest *request) {
 	DEBUG("Got time request")
 	String wifiTime = request->getParam("time", true, false)->value();
 
-	DEBUG(String("Setting time from wifi manager") + wifiTime);
-	int intValues[6];
-	grabInts(wifiTime, &intValues[0], ",");
-
-	timeInitialized = true;
-	setTime(intValues[SYNC_HOURS], intValues[SYNC_MINS], intValues[SYNC_SECS],
-			intValues[SYNC_DAY], intValues[SYNC_MONTH], intValues[SYNC_YEAR]);
+	timeSync->setTime(wifiTime);
 
 	request->send(SPIFFS, "/time.html");
 }
 
 const byte numLEDs = 10;
-#ifdef DEBUG_ALT
-#define LED_PIN 12
-#else
-#define LED_PIN 1
-#endif
-LEDRGB leds(numLEDs, LED_PIN);
-
-void setLedState(bool on, byte scale) {
-	if (!on) {
-		leds.setLedColorHSV(*CurrentConfig::hue, *CurrentConfig::saturation, 0);
-	} else {
-		leds.setLedColorHSV(*CurrentConfig::hue, *CurrentConfig::saturation, scale);
-	}
-}
+NeoPixelBus <NeoGrbFeature, NeoEsp8266Uart0800KbpsMethod> leds(numLEDs);
 
 void ledDisplay(bool backLight=true, bool underLight=true) {
-#ifndef DEBUG_ITS1A
-	if (backLight || underLight) {
-		pinMode(LED_PIN, OUTPUT);
-		digitalWrite(LED_PIN, LOW);
+	uint8_t scale = *CurrentConfig::led_scale;
+	if (!backLight) {
+		scale = 0;
 	}
-#endif
+	HsbColor color((byte)(*CurrentConfig::hue)/256.0, (byte)(*CurrentConfig::saturation)/256.0, scale/256.0);
 
-	setLedState(backLight, *CurrentConfig::led_scale);
 	for (int i=0; i<6; i++) {
-		leds.ledDisplay(i);
+		leds.SetPixelColor(i, color);
 	}
 
-	setLedState(underLight, *CurrentConfig::underlight_scale);
+	scale = *CurrentConfig::underlight_scale;
+	if (!underLight) {
+		scale = 0;
+	}
+
+	color = HsbColor((byte)(*CurrentConfig::hue)/256.0, (byte)(*CurrentConfig::saturation)/256.0, scale/256.0);
+
 	for (int i=6; i<10; i++) {
-		leds.ledDisplay(i);
+		leds.SetPixelColor(i, color);
 	}
 
 #ifndef DEBUG_ITS1A
-	leds.show();
-
-	if (!backLight && !underLight) {
-		pinMode(LED_PIN, INPUT);
-	}
+	leds.Show();
 #endif
 }
 
@@ -569,8 +469,18 @@ WSConfigHandler wsLEDHandler(rootConfig, "leds");
 WSConfigHandler wsExtraHandler(rootConfig, "extra");
 WSGlobalConfigHandler wsAlexaHandler(rootConfig, "alexa");
 WSPresetValuesHandler wsPresetValuesHandler(rootConfig);
-WSInfoHandler wsInfoHandler(ssid, lastUpdateTime, lastFailedMessage, failedCountS);
+WSInfoHandler wsInfoHandler(infoCallback);
 WSPresetNamesHandler wsPresetNamesHandler(rootConfig);
+
+void infoCallback() {
+	wsInfoHandler.setSsid(ssid);
+	wsInfoHandler.setBlankingMonitor(&blankingMonitor);
+	TimeSync::SyncStats &syncStats = timeSync->getStats();
+
+	wsInfoHandler.setFailedCount(syncStats.failedCount);
+	wsInfoHandler.setLastFailedMessage(syncStats.lastFailedMessage);
+	wsInfoHandler.setLastUpdateTime(syncStats.lastUpdateTime);
+}
 
 String *items[] = {
 	&WSMenuHandler::clockMenu,
@@ -637,13 +547,10 @@ void updateValue(int screen, String pair) {
 			item->put();
 			// Shouldn't special case this stuff. Should attach listeners to the config value!
 			// TODO: This won't work if we just switch change sets instead!
-#ifndef USE_NTP
 			if (strcmp(key, CurrentConfig::time_url->name) == 0) {
-				DEBUG(value);
-				httpClient.initialize(value);
-				getTime();
+				timeSync->setTz(value);
+				timeSync->sync();
 			}
-#endif
 			broadcastUpdate(*item);
 		}
 	}
@@ -884,13 +791,11 @@ void SetupServer() {
 		DEBUG("WiFi connected, setting up responder");
 		MDNS.begin(hostName.value.c_str(), WiFi.localIP());
 		MDNS.addService("http", "tcp", 80);
+		timeSync->init();
 	}
-
-	getTime();
 }
 
 SoftMSTimer::TimerInfo *infos[] = {
-		&syncTimeTimer,
 		&ledTimer,
 		&eepromUpdateTimer,
 #if defined DEBUG_ITS1A //|| defined DEBUG_ALT
@@ -905,7 +810,7 @@ void setup()
 {
 #if !defined DEBUG_ITS1A && !defined DEBUG_ALT
 	pinMode(MovPin, FUNCTION_3);
-	pinMode(LED_PIN, FUNCTION_3);
+//	pinMode(LED_PIN, FUNCTION_3);
 #endif
 
 #ifndef DEBUG_ITS1A
@@ -923,11 +828,11 @@ void setup()
 
 	initFromEEPROM();
 
-	httpClient.initialize(*CurrentConfig::time_url);
+	timeSync = new EspSNTPTimeSync(*CurrentConfig::time_url, NULL, NULL);
 
 	// Enable LEDs
 #ifndef DEBUG_ITS1A
-	leds.begin();
+	leds.Begin();
 	ledDisplay(*CurrentConfig::backlight, *CurrentConfig::underlight);
 #endif
 
@@ -1010,6 +915,8 @@ void loop()
 #else
 	bool clockOn = pNixieClock->isOn();
 #endif
+
+	blankingMonitor.on(clockOn);
 
 	if ((*CurrentConfig::backlight || *CurrentConfig::underlight) && clockOn) {
 		ledTimer.interval = *CurrentConfig::cycle_time * 1000L / 256;
