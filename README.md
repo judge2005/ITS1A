@@ -21,3 +21,6 @@ Here are some examples:
 | Australia/Perth | AWST-8 |
 | Australia/Adelaide | ACST-9:30ACDT,M10.1.0,M4.1.0/3 |
 | Australia/Sydney | AEST-10AEDT,M10.1.0,M4.1.0/3 |
+## Compilation From Source
+See the source ITS1A.ino for location of dependencies. This is also compiled with the following flags:
+    -DNEW_WSTRING -DUSE_EADNS -DESP8266_2_7_3 -DITS1A

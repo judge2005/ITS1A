@@ -640,7 +640,7 @@ environment/project/io.sloeber.core.toolChain.release.34549407/JANTJE.EXTRA.C.CO
 environment/project/io.sloeber.core.toolChain.release.34549407/JANTJE.EXTRA.C.COMPILE/value=
 environment/project/io.sloeber.core.toolChain.release.34549407/JANTJE.EXTRA.COMPILE/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.34549407/JANTJE.EXTRA.COMPILE/operation=replace
-environment/project/io.sloeber.core.toolChain.release.34549407/JANTJE.EXTRA.COMPILE/value=-DNEW_WSTRING -DUSE_EADNS -DESP8266_2_7_3
+environment/project/io.sloeber.core.toolChain.release.34549407/JANTJE.EXTRA.COMPILE/value=-DNEW_WSTRING -DUSE_EADNS -DESP8266_2_7_3 -DITS1A
 environment/project/io.sloeber.core.toolChain.release.34549407/JANTJE.EXTRA.CPP.COMPILE/delimiter=;
 environment/project/io.sloeber.core.toolChain.release.34549407/JANTJE.EXTRA.CPP.COMPILE/operation=replace
 environment/project/io.sloeber.core.toolChain.release.34549407/JANTJE.EXTRA.CPP.COMPILE/value=
