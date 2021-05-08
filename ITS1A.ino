@@ -1,5 +1,6 @@
 //#define DEBUG_ITS1A
 //#define DEBUG_ALT
+#define SYNC_BUS
 #if defined DEBUG_ITS1A //|| defined DEBUG_ALT
 #define DEBUG(...) { Serial.println(__VA_ARGS__); }
 Print *debugPrint = &Serial;
@@ -7,7 +8,7 @@ Print *debugPrint = &Serial;
 #define DEBUG(...) { }
 #endif
 
-#define ALEXA
+//#define ALEXA
 // Not enough space in ESP01 for SPIFFS, the app and an upload space.
 //#define OTA
 
@@ -56,6 +57,8 @@ const byte MovPin = 3;	// PIR/Radar etc.
 
 unsigned long nowMs = 0;
 
+char *revision="$Rev: 480 $";
+
 String chipId = String(ESP.getChipId(), HEX);
 String ssid = "STC-";
 
@@ -66,6 +69,9 @@ AsyncWebSocket ws("/ws"); // access at ws://[esp ip]/ws
 AsyncDNSServer dns;
 AsyncWiFiManager wifiManager(&server,&dns);
 TimeSync *timeSync;
+#ifdef SYNC_BUS
+WiFiUDP syncBus;
+#endif
 
 #ifdef OTA
 ASyncOTAWebUpdate otaUpdater(Update, "update", "secretsauce");
@@ -172,6 +178,9 @@ CompositeConfigItem rootConfig("root", 0, configSetRoot);
 
 EEPROMConfig config(rootConfig);
 
+void infoCallback();
+String wifiCallback();
+
 namespace CurrentConfig {
 	String name("set1");
 	CompositeConfigItem *config = &ConfigSet1::config;
@@ -207,6 +216,7 @@ namespace CurrentConfig {
 	IntConfigItem *set_time = &ConfigSet1::set_time;
 	BooleanConfigItem *hv = &ConfigSet1::hv;
 	ByteConfigItem *mov_delay = &ConfigSet1::mov_delay;
+	ByteConfigItem *mov_src = &ConfigSet1::mov_src;
 
 	// Alexa config values
 	StringConfigItem *date_name = &::date_name;
@@ -217,6 +227,10 @@ namespace CurrentConfig {
 	StringConfigItem *cycling_name = &::cycling_name;
 	StringConfigItem *twelve_hour_name = &::twelve_hour_name;
 	StringConfigItem *zero_name = &::zero_name;
+
+	// Sync config values
+	IntConfigItem *sync_port = &ConfigSet1::sync_port;
+	ByteConfigItem *sync_role = &ConfigSet1::sync_role;
 
 	void setCurrent(const String &name) {
 		if (CurrentConfig::name == name) {
@@ -266,6 +280,11 @@ namespace CurrentConfig {
 			set_time = static_cast<IntConfigItem*>(config->get("set_time"));
 			hv = static_cast<BooleanConfigItem*>(config->get("hv"));
 			mov_delay = static_cast<ByteConfigItem*>(config->get("mov_delay"));
+			mov_src = static_cast<ByteConfigItem*>(config->get("mov_src"));
+
+			// Sync config values
+			sync_port = static_cast<IntConfigItem*>(config->get("sync_port"));
+			sync_role = static_cast<ByteConfigItem*>(config->get("sync_role"));
 
 			BaseConfigItem *currentSetName = rootConfig.get("current_set");
 			currentSetName->fromString(name);
@@ -326,6 +345,104 @@ private:
 
 ITS1ANixieDriverConfigurator driverConfigurator(nixieDriver);
 SixNixieClockConfigurator clockConfigurator(sixNixieClock);
+
+#ifdef SYNC_BUS
+void writeSyncBus(char msg[]) {
+	IPAddress broadcastIP(~((uint32_t)WiFi.subnetMask()) | ((uint32_t)WiFi.gatewayIP()));
+	syncBus.beginPacket(broadcastIP, *CurrentConfig::sync_port);
+	syncBus.write(msg);
+	syncBus.endPacket();
+}
+
+void sendSyncMsg() {
+	static char syncMsg[10] = "sync:";
+	if (*CurrentConfig::sync_role == 1) {
+		itoa(*CurrentConfig::hue, &syncMsg[5], 10);
+		writeSyncBus(syncMsg);
+		pNixieClock->syncDisplay();
+//		*CurrentConfig::digit = pNixieClock->getNixieDigit();
+	}
+}
+
+void sendMovMsg() {
+	static char syncMsg[10] = "mov";
+	static unsigned long lastSend = 0;
+
+	// send at most 10 notifications/sec
+	if (*CurrentConfig::sync_role == 1 && (nowMs - lastSend >= 100)) {
+		lastSend = nowMs;
+
+		writeSyncBus(syncMsg);
+	}
+}
+
+void announceSlave() {
+	static char syncMsg[] = "slave";
+	if (*CurrentConfig::sync_role == 2) {
+		writeSyncBus(syncMsg);
+	}
+}
+
+void readSyncBus() {
+	static char incomingMsg[10];
+
+	int size = syncBus.parsePacket();
+
+	if (size) {
+		int len = syncBus.read(incomingMsg, 9);
+		if (len > 0 && len < 10) {
+			incomingMsg[len] = 0;
+
+			if (strncmp("sync", incomingMsg, 4) == 0) {
+				if (strlen(incomingMsg) > 5) {
+					byte hue = atoi(&incomingMsg[5]);
+					*CurrentConfig::hue = hue;
+				}
+				pNixieClock->syncDisplay();
+//				*CurrentConfig::digit = pNixieClock->getNixieDigit();
+				return;
+			}
+
+			if (strncmp("mov", incomingMsg, 3) == 0) {
+				mov.trigger();
+			}
+
+			if (*CurrentConfig::sync_role == 1 && strcmp("slave", incomingMsg) == 0) {
+				// A new slave just joined, broadcast a sync message
+				sendSyncMsg();
+			}
+		}
+	}
+}
+
+void syncBusLoop() {
+	static byte currentRole = 255;
+
+	if (*CurrentConfig::sync_role != 0) {
+		// We are a master or slave
+		// If port has changed, set new port and announce status
+		if (syncBus.localPort() != *CurrentConfig::sync_port) {
+			syncBus.begin(*CurrentConfig::sync_port);
+			currentRole = 255;
+		}
+	} else {
+		// We aren't in a sync group
+		currentRole = 0;
+		syncBus.stop();
+	}
+
+	if (currentRole != *CurrentConfig::sync_role) {
+		currentRole = *CurrentConfig::sync_role;
+		if (currentRole == 1) {
+			sendSyncMsg();
+		} else if (currentRole == 2) {
+			announceSlave();
+		}
+	}
+
+	readSyncBus();
+}
+#endif
 
 void initClock() {
 	pDriver->init();
@@ -429,6 +546,18 @@ void createSSID() {
 	ssid = (chipId + hostName).substring(0, 31);
 }
 
+void setWiFiAP(bool on) {
+	if (on) {
+		if (!wifiManager.isAP()) {
+			wifiManager.startConfigPortalModeless(ssid.c_str(), "secretsauce", false);
+		}
+	} else {
+		if (wifiManager.isAP()) {
+			wifiManager.stopConfigPortal();
+		}
+	}
+}
+
 void mainHandler(AsyncWebServerRequest *request) {
 	DEBUG("Got request")
 	request->send(SPIFFS, "/index.html");
@@ -440,17 +569,16 @@ void sendFavicon(AsyncWebServerRequest *request) {
 }
 
 void broadcastUpdate(const BaseConfigItem& item) {
-	const size_t bufferSize = JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(1);
+	const size_t bufferSize = JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(20);	// 20 should be plenty
+#ifdef JSON5
 	DynamicJsonBuffer jsonBuffer(bufferSize);
-
 	JsonObject& root = jsonBuffer.createObject();
+
 	root["type"] = "sv.update";
 
-	JsonObject& value = root.createNestedObject("value");
+	JsonObject &value = root.createNestedObject("value");
 	String rawJSON = item.toJSON();	// This object needs to hang around until we are done serializing.
 	value[item.name] = ArduinoJson::RawJson(rawJSON.c_str());
-
-//	root.printTo(*debugPrint);
 
     size_t len = root.measureLength();
     AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
@@ -458,6 +586,25 @@ void broadcastUpdate(const BaseConfigItem& item) {
         root.printTo((char *)buffer->get(), len + 1);
     	ws.textAll(buffer);
     }
+
+#else
+	DynamicJsonDocument doc(bufferSize);
+	JsonObject root = doc.to<JsonObject>();
+
+	root["type"] = "sv.update";
+
+	JsonVariant value = root.createNestedObject("value");
+	String rawJSON = item.toJSON();	// This object needs to hang around until we are done serializing.
+	value[item.name] = serialized(rawJSON.c_str());
+
+    size_t len = measureJson(root);
+    AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
+    if (buffer) {
+    	serializeJson(root, (char *)buffer->get(), len + 1);
+    	ws.textAll(buffer);
+    }
+
+#endif
 
 #ifdef ALEXA
 	updateFauxMoValues();
@@ -471,10 +618,12 @@ WSGlobalConfigHandler wsAlexaHandler(rootConfig, "alexa");
 WSPresetValuesHandler wsPresetValuesHandler(rootConfig);
 WSInfoHandler wsInfoHandler(infoCallback);
 WSPresetNamesHandler wsPresetNamesHandler(rootConfig);
+WSConfigHandler wsSyncHandler(rootConfig, "sync");
 
 void infoCallback() {
 	wsInfoHandler.setSsid(ssid);
 	wsInfoHandler.setBlankingMonitor(&blankingMonitor);
+	wsInfoHandler.setRevision(revision);
 	TimeSync::SyncStats &syncStats = timeSync->getStats();
 
 	wsInfoHandler.setFailedCount(syncStats.failedCount);
@@ -486,6 +635,9 @@ String *items[] = {
 	&WSMenuHandler::clockMenu,
 	&WSMenuHandler::ledsMenu,
 	&WSMenuHandler::extraMenu,
+#ifdef SYNC_BUS
+	&WSMenuHandler::syncMenu,
+#endif
 #ifdef ALEXA
 	&WSMenuHandler::alexaMenu,
 #endif
@@ -497,6 +649,7 @@ String *items[] = {
 
 WSMenuHandler wsMenuHandler(items);
 
+// Order of this needs to match the numbers in WSMenuHandler.cpp
 WSHandler *wsHandlers[] = {
 	&wsMenuHandler,
 	&wsClockHandler,
@@ -505,7 +658,8 @@ WSHandler *wsHandlers[] = {
 	&wsPresetValuesHandler,
 	&wsInfoHandler,
 	&wsPresetNamesHandler,
-	&wsAlexaHandler
+	&wsAlexaHandler,
+	&wsSyncHandler
 };
 
 void updateValue(int screen, String pair) {
@@ -552,6 +706,11 @@ void updateValue(int screen, String pair) {
 				timeSync->sync();
 			}
 			broadcastUpdate(*item);
+		} else if (_key == "sync_do") {
+			sendSyncMsg();
+			announceSlave();
+		} else if (_key == "wifi_ap") {
+			setWiFiAP(value == "true" ? true : false);
 		}
 	}
 }
@@ -786,12 +945,15 @@ void SetupServer() {
 	hostName = String(hostnameParam->getValue());
 	hostName.put();
 	config.commit();
+	createSSID();
 	DEBUG(hostName.value);
 	if (WiFi.status() == WL_CONNECTED) {
 		DEBUG("WiFi connected, setting up responder");
 		MDNS.begin(hostName.value.c_str(), WiFi.localIP());
 		MDNS.addService("http", "tcp", 80);
-		timeSync->init();
+		if (!timeSync->initialized()) {
+			timeSync->init();
+		}
 	}
 }
 
@@ -850,12 +1012,17 @@ void setup()
 #else
 	wifiManager.setDebugOutput(false);
 #endif
-
 	wifiManager.setCustomOptionsElement("<br><form action='/t' name='time_form' method='post'><button name='time' onClick=\"{var now=new Date();this.value=now.getFullYear()+','+(now.getMonth()+1)+','+now.getDate()+','+now.getHours()+','+now.getMinutes()+','+now.getSeconds();} return true;\">Set Clock Time</button></form><br><form action=\"/app.html\" method=\"get\"><button>Configure Clock</button></form>");
-	wifiManager.setConnectTimeout(10);
 	wifiManager.addParameter(hostnameParam);
 	wifiManager.setSaveConfigCallback(SetupServer);
-    wifiManager.startConfigPortalModeless(ssid.c_str(), "secretsauce");
+	wifiManager.setConnectTimeout(10);
+    if (wifiManager.autoConnectModeless(ssid.c_str(), "secretsauce")) {
+    	MDNS.begin(hostName.value.c_str());
+        MDNS.addService("http", "tcp", 80);
+		if (!timeSync->initialized()) {
+			timeSync->init();
+		}
+    }
 
     // This has to be done AFTER the wifiManager setup, because the wifimanager resets
     // the server which causes a crash...
@@ -880,9 +1047,10 @@ void setup()
 
 	nowMs = millis();
 
-#ifndef DEBUG_ITS1A
-	mov.setDelay(1);
 	mov.setOnTime(nowMs);
+	mov.setDelay(1);
+#ifdef SYNC_BUS
+	mov.setSrc(*CurrentConfig::mov_src);
 #endif
 
 	DEBUG("Exit setup")
@@ -896,14 +1064,20 @@ void loop()
 	if (WiFi.status() == WL_CONNECTED) {
 		MDNS.update();
 	}
-	wifiManager.loop();
+	wifiManager.loopNoScan();
 #ifdef ALEXA
 	fauxmo.handle();
+#endif
+#ifdef SYNC_BUS
+	syncBusLoop();
 #endif
 
 	nowMs = millis();
 
 	mov.setDelay(*CurrentConfig::mov_delay);
+#ifdef SYNC_BUS
+	mov.setSrc(*CurrentConfig::mov_src);
+#endif
 
 	driverConfigurator.configure();
 	clockConfigurator.configure();

@@ -132,6 +132,11 @@
 			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPAsyncWiFiManager</location>
 		</link>
 		<link>
+			<name>libraries/ESPConfig</name>
+			<type>2</type>
+			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPConfig</location>
+		</link>
+		<link>
 			<name>libraries/ESPPerfectTime</name>
 			<type>2</type>
 			<location>C:/Users/mpand/Documents/Arduino/libraries/ESPPerfectTime</location>
@@ -190,6 +195,11 @@
 			<name>libraries/Wire</name>
 			<type>2</type>
 			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/2.7.3/libraries/Wire</locationURI>
+		</link>
+		<link>
+			<name>libraries/arduinoFFT</name>
+			<type>2</type>
+			<location>C:/Users/mpand/Documents/Arduino/libraries/arduinoFFT</location>
 		</link>
 		<link>
 			<name>libraries/fauxmoesp</name>

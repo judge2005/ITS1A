@@ -30,6 +30,7 @@ var pages = {
 			{"2": { "url" : "leds.html", "title" : "LEDs" }},
 			{"3": { "url" : "extra.html", "title" : "Extra" }},
 			{"7": { "url" : "alexa.html", "title" : "Alexa" }},
+			{"8": { "url" : "sync.html", "title" : "Network" }},
 			{"4": { "url" : "presets.html", "title" : "Presets", "noNav" : true }},
 			{"5": { "url" : "info.html", "title" : "Info" }},
 			{"6": { "url" : "preset_names.html", "title" : "Preset Names", "noNav" : true}}		
@@ -70,6 +71,14 @@ var sendExtraValues = function(conn) {
 	conn.send(json);	
 }
 
+var sendSyncValues = function(conn) {
+	var json = '{"type":"sv.init.sync","value":';
+	json += JSON.stringify(state[8]);
+	json += '}';
+	console.log(json);
+	conn.send(json);	
+}
+
 var sendPresetValues = function(conn) {
 	var json = '{"type":"sv.init.presets","value":';
 	json += JSON.stringify(state[4]);
@@ -97,6 +106,14 @@ var sendPresetNames = function(conn) {
 var sendAlexa = function(conn) {
 	var json = '{"type":"sv.init.alexa","value":';
 	json += JSON.stringify(state[7]);
+	json += '}';
+	console.log(json);
+	conn.send(json);	
+}
+
+var sendSync = function(conn) {
+	var json = '{"type":"sv.init.sync","value":';
+	json += JSON.stringify(state[8]);
 	json += '}';
 	console.log(json);
 	conn.send(json);	
@@ -164,11 +181,17 @@ var state = {
 		'cycling_name' : 'hue cycling',
 		'twelve_hour_name' : '12 hour',
 		'zero_name' : 'leading zero'
+	},
+	"8": {
+		'sync_port' : '2140',
+		'sync_role' : '0',
+		'set_icon_sync' : 'burble',
+		'wifi_ap' : true
 	}
 }
 
 var broadcastUpdate = function(conn, field, value) {
-	var json = '{"type":"sv.update","value":{' + '"' + field + '":' + value + '}}';
+	var json = '{"type":"sv.update","value":{' + '"' + field + '":' + JSON.stringify(value) + '}}';
 	console.log(json);
 	try {
 		conn.send(json);
@@ -238,6 +261,9 @@ wss.on('connection', function(conn) {
     		break;
     	case 7:
     		sendAlexa(conn);
+    		break;
+    	case 8:
+    		sendSync(conn);
     		break;
     	case 9:
     		message = message.substring(message.indexOf(':')+1);
