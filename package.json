@@ -1,0 +1,34 @@
+{
+	"name": "its1a",
+	"version": "0.1.0",
+	"description": "nixies.us its1a clock web assets",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo blah"
+	},
+	"author": "Paul Andrews",
+	"license": "ISC",
+	"devDependencies": {
+		"del": "^2.2.1",
+		"grunt": "*",
+		"grunt-contrib-concat": "*",
+		"grunt-contrib-jshint": "*",
+		"grunt-contrib-nodeunit": "*",
+		"grunt-contrib-uglify": "*",
+		"grunt-contrib-watch": "*",
+		"gulp": "*",
+		"gulp-base64-favicon": "*",
+		"gulp-beautify": "*",
+		"gulp-clean-css": "*",
+		"gulp-css-inline-images": "*",
+		"gulp-gzip": "*",
+		"gulp-htmlmin": "*",
+		"gulp-if": "*",
+		"gulp-inline": "*",
+		"gulp-plumber": "*",
+		"gulp-uglify": "*",
+		"gulp-useref": "*",
+		"properties-reader": "*",
+		"yargs": "*"
+	}
+}
