@@ -30,9 +30,9 @@ Print *debugPrint = &Serial;
 #ifdef USE_EADNS
 #include <ESPAsyncDNSServer.h>		// https://github.com/devyte/ESPAsyncDNSServer
 #endif
-#include <AsyncWiFiManager.h>	// https://github.com/alanswx/ESPAsyncWiFiManager
+#include <AsyncWiFiManager.h>		// https://github.com/judge2005/AsyncWiFiManager
 #include <DNSServer.h>
-#include <NeoPixelBus.h>
+#include <NeoPixelBus.h>			// https://github.com/Makuna/NeoPixelBus
 #include <EspSNTPTimeSync.h>		// https://github.com/judge2005/TimeSync
 #ifdef ALEXA
 #include <fauxmoESP.h>              // https://bitbucket.org/judge2005/fauxmoesp
@@ -40,11 +40,11 @@ Print *debugPrint = &Serial;
 #endif
 
 #include <ITS1ANixieDriver.h>       // https://github.com/judge2005/NixieDriver
-#include <SixNixieClock.h>          //                 "
-#include <SoftMSTimer.h>            //                 "
+#include <SixNixieClock.h>          // https://github.com/judge2005/OneNixieClock
+#include <SoftMSTimer.h>            // https://github.com/judge2005/NixieMisc
 #include <MovementSensor.h>         //                 "
 
-#include <WSHandler.h>              //                 "
+#include <WSHandler.h>              // https://github.com/judge2005/NixieMisc
 #include <WSMenuHandler.h>          //                 "
 #include <WSConfigHandler.h>        //                 "
 #include <WSGlobalConfigHandler.h>  //                 "
@@ -60,7 +60,7 @@ const byte MovPin = 3;	// PIR/Radar etc.
 
 unsigned long nowMs = 0;
 
-char *revision="$Rev: 587 $";
+char *revision="$Rev: 634 $";
 
 String chipId = String(ESP.getChipId(), HEX);
 String ssid = "STC-";
